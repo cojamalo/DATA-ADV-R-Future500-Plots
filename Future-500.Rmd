@@ -1,0 +1,84 @@
+---
+title: "Future 500- Advanced R Practice"
+output:
+  html_document: default
+  html_notebook: default
+---
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.align='center', fig.width=6)
+```
+### Submission by Connor Lenio. Email: cojamalo@gmail.com
+Completion Date: May 4, 2017
+
+## Assignment
+You have been hired by the “Future 500” magazine*. The stakeholders have supplied
+you a list of 500 companies and would like you to create some draft visualizations for
+their upcoming online publication.
+They have requested the following charts:
+* A scatterplot classified by industry showing revenue, expenses, profit
+* A scatterplot that includes industry trends for the expenses~revenue relationship
+* BoxPlots showing growth by industry
+
+Note that the dataset has numerous discrepancies that need to be addressed before
+analysis can be performed
+
+## Data
+
+Import the needed packages:
+```{r, message=FALSE, warning=FALSE}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+```
+
+Read the data into R using fread:
+```{r}
+all_data <- fread("Future-500.csv", na.strings = "", showProgress = FALSE) %>% tbl_df
+```
+
+
+### Data Cleaning
+Identify those rows with incomplete information:
+```{r}
+all_data[!complete.cases(all_data),]
+```
+<br>
+
+The relevant variables needed for the requested plots are `Industry`, `Revenue`, `Expenses`, `Profit`, and `Growth`. The missing information will definitely have to be addressed for these variables. Only missing data in these columns will qualify as grounds for excluding a row completely from the data, otherwise we can make simple changes to complete problem rows:
+```{r}
+all_data[all_data$City == "New York",]$State <- "NY"
+all_data[all_data$City == "San Francisco",]$State <- "CA"
+all_data[is.na(all_data$Employees),]$Employees <- median(all_data$Employees, na.rm = TRUE)
+all_data[is.na(all_data$Inception),]$Inception <- median(all_data$Inception, na.rm = TRUE)
+all_data[!complete.cases(all_data),]
+```
+<br>
+
+At this point, only rows with missing data from the variables of interest remain. The conservative approach is taken here and these rows are dropped to avoid adding in information into the plots that would have to be imputed or estimated. Then, all variables that should be numeric are properly converted from the character type. The `Industry` column is also factored in this step:
+```{r}
+comp_data <- all_data[complete.cases(all_data),]
+comp_data$Industry <- factor(comp_data$Industry)
+comp_data$Revenue <- as.numeric(gsub('[$,]', '', comp_data$Revenue))
+comp_data$Expenses <- as.numeric(gsub('[,A-Za-z]', '', comp_data$Expenses))
+comp_data$Growth <- as.numeric(gsub('[%]', '', comp_data$Growth))
+```
+
+## Data Visualization
+
+Now, the data are ready to be plotted. The following are draft plots that address the requested information. After these plots are constructed, more information would be requested from the client to address any aesthetic needs for the plots, including titles and themes.
+
+1) A scatterplot classified by industry showing revenue, expenses, profit
+```{r}
+ggplot(comp_data, aes(x = Revenue, y = Expenses, color = Industry, size= Profit)) + geom_point()
+```
+<br>
+
+2) A scatterplot that includes industry trends for the expenses~revenue relationship
+```{r}
+ggplot(comp_data, aes(x = Revenue, y = Expenses, color = Industry)) + geom_point() +geom_smooth(method="lm",se=FALSE) 
+```
+<br>
+3) BoxPlots showing growth by industry
+```{r}
+ggplot(comp_data, aes(x = Industry, y = Growth, color = Industry)) + geom_boxplot()
+```
